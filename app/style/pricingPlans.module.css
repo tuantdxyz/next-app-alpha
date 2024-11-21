@@ -1,0 +1,75 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.toggleContainer {
+  display: flex;
+  margin-bottom: 2rem;
+}
+
+.toggleButton {
+  padding: 0.5rem 1rem;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.toggleButton.active {
+  background-color: #0070f3;
+}
+
+.plansContainer {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.plans {
+  display: flex;
+  justify-content: space-between;
+  /* Căn giữa các planCard */
+}
+
+.planCard {
+  flex: 1;
+  /* Các thẻ có chiều rộng bằng nhau */
+  margin: 0 10px;
+  /* Khoảng cách giữa các thẻ */
+  display: flex;
+  flex-direction: column;
+  /* Sắp xếp theo cột */
+  justify-content: space-between;
+  /* Căn chỉnh nội dung */
+  padding: 20px;
+  /* Padding cho các thẻ */
+  border: 1px solid #ccc;
+}
+
+.planName {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.planPrice {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+}
+
+.subscribeButton {
+  padding: 0.5rem 1rem;
+  background-color: #0070f3;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  margin-top: auto;
+  padding: 10px;
+  border-radius: 5px;
+}
+
