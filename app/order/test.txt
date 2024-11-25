@@ -1,5 +1,5 @@
-'use client'
-import { useState, useEffect, useRef } from 'react';
+// app/order/page.tsx
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import QRCodeImage from '../media/QRCode_example.png';
@@ -15,14 +15,44 @@ const OrderPage = () => {
   const productPrice = price;
 
   const [paymentStatus, setPaymentStatus] = useState('Unpaid');
-  const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(10);
+  const [timeRemaining, setTimeRemaining] = useState(60); // Thời gian chờ tối đa 60 giây
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const checkPaymentStatus = () => {
+  const checkPaymentStatus = async () => {
     setLoading(true);
-    intervalRef.current = setInterval(() => {
+    
+    const fetchPaymentStatus = async () => {
+      try {
+        const response = await fetch('/order'); // Gọi API payment-status
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data.status; // Trả về trạng thái
+      } catch (error) {
+        console.error('Có lỗi xảy ra khi gọi API:', error);
+        return null; // Trả về null nếu có lỗi
+      }
+    };
+
+    let timeoutId = setTimeout(() => {
+      clearInterval(intervalRef.current!);
+      setPaymentStatus('Cancelled'); // Hủy đơn hàng sau 60 giây
+      setLoading(false);
+    }, 60000); // Thời gian tối đa 60 giây
+
+    intervalRef.current = setInterval(async () => {
+      const status = await fetchPaymentStatus(); // Gọi API để lấy trạng thái
+      if (status) {
+        setPaymentStatus(status); // Cập nhật trạng thái
+        if (status === 'Paid' || status === 'Cancelled') {
+          clearInterval(intervalRef.current!); // Dừng interval nếu đã có kết quả
+          clearTimeout(timeoutId); // Dừng timeout nếu có kết quả
+          setLoading(false);
+        }
+      }
+      
       setTimeRemaining((prevTime) => {
         if (prevTime <= 1) {
           clearInterval(intervalRef.current!);
@@ -31,28 +61,17 @@ const OrderPage = () => {
         }
         return prevTime - 1;
       });
-    }, 1000);
+    }, 2000); // Kiểm tra mỗi 2 giây
   };
 
   // Kiểm tra trạng thái thanh toán khi component được mount
   useEffect(() => {
     checkPaymentStatus();
-
-    // Giả lập trạng thái thanh toán thành công hay thất bại
-    const timeoutId = setTimeout(() => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current); // Dừng interval
-      }
-      setLoading(false);
-      // setPaymentStatus('Paid'); // Cập nhật trạng thái thành 'Paid'
-      setPaymentStatus('Cancelled');
-    }, 5000);
-
+    
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current); // Dừng interval khi component unmount
       }
-      clearTimeout(timeoutId); // Dừng timeout khi component unmount
     };
   }, []);
 

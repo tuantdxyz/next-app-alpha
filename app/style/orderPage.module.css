@@ -94,3 +94,21 @@
   margin-right: 10px; /* Khoảng cách 1px giữa các nút */
 }
 
+.loader {
+  border: 8px solid rgba(255, 255, 255, 0.2);
+  border-left-color: #0070f3; /* Màu sắc của phần quay */
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite; /* Hiệu ứng quay */
+  margin: 20px auto; /* Canh giữa */
+}
+
+@keyframes spin {
+  0% {
+      transform: rotate(0deg);
+  }
+  100% {
+      transform: rotate(360deg);
+  }
+}
