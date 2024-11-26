@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -10,51 +10,75 @@ const OrderPage = () => {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const price = searchParams.get('price');
+  const tempId = searchParams.get('tempId'); // Lấy tempId từ URL
 
   const productName = plan;
   const productPrice = price;
 
   const [paymentStatus, setPaymentStatus] = useState('Unpaid');
-  const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(10);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(200); // Thời gian đếm ngược 200 giây
+  const [showPopup, setShowPopup] = useState(false); // Trạng thái để hiển thị popup
+  const intervalRef = useRef<number | null>(null); // Đảm bảo kiểu là number hoặc null
 
-  const checkPaymentStatus = () => {
+  const checkPaymentStatus = async () => {
     setLoading(true);
-    intervalRef.current = setInterval(() => {
-      setTimeRemaining((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(intervalRef.current!);
-          setPaymentStatus('Cancelled'); // Cập nhật trạng thái thành 'Cancelled'
-          return 0; // Đảm bảo không có giá trị âm
-        }
-        return prevTime - 1;
+    try {
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tempId }), // Sử dụng tempId từ URL
       });
-    }, 1000);
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok'); // Ném lỗi nếu không thành công
+      }
+
+      const data = await response.json();
+      setPaymentStatus(data.payment_status || 'Unpaid');
+    } catch (error) {
+      // Không xử lý lỗi để không hiển thị thông báo
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Kiểm tra trạng thái thanh toán khi component được mount
   useEffect(() => {
-    checkPaymentStatus();
-
-    // Giả lập trạng thái thanh toán thành công hay thất bại
-    const timeoutId = setTimeout(() => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current); // Dừng interval
-      }
-      setLoading(false);
-      // setPaymentStatus('Paid'); // Cập nhật trạng thái thành 'Paid'
-      setPaymentStatus('Cancelled');
-    }, 5000);
+    if (timeRemaining > 0) {
+      checkPaymentStatus(); // Gọi API chỉ khi thời gian còn lại
+      intervalRef.current = window.setInterval(checkPaymentStatus, 5000); // Kiểm tra mỗi 5 giây
+    }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current); // Dừng interval khi component unmount
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current); // Chỉ gọi clearInterval khi intervalRef.current không phải null
       }
-      clearTimeout(timeoutId); // Dừng timeout khi component unmount
     };
+  }, [timeRemaining]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev > 0) {
+          return prev - 1;
+        } else {
+          clearInterval(timerId); // Dừng interval khi hết thời gian
+          setPaymentStatus('Cancelled'); // Cập nhật trạng thái thanh toán
+          setShowPopup(true); // Hiển thị popup
+          return 0; // Đảm bảo không giảm xuống dưới 0
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(timerId); // Dọn dẹp interval khi component unmount
   }, []);
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
+    router.push('/'); // Quay lại trang chủ khi đóng popup
+  };
 
   return (
     <div className={styles.container}>
@@ -69,8 +93,8 @@ const OrderPage = () => {
               <Image src={QRCodeImage} alt="QR Code" width={300} height={300} />
               <h2>Vui lòng quét mã QR để thanh toán</h2>
               <p>Hệ thống đang chờ xác nhận thanh toán của bạn.</p>
-              {loading && <div className={styles.loader}></div>}
               <p>Thời gian còn lại: {timeRemaining} giây</p>
+              {loading && <div className={styles.loader}></div>}
             </div>
           </div>
         )}
@@ -85,13 +109,15 @@ const OrderPage = () => {
           </div>
         )}
 
-        {paymentStatus === 'Cancelled' && (
-          <div className={styles.failurePayBox}>
-            <h2>Đơn hàng đã bị hủy</h2>
-            <p>Vui lòng thử lại.</p>
-            <button onClick={() => router.push('/')} className={styles.closeButton}>
-              Về trang chủ
-            </button>
+        {paymentStatus === 'Cancelled' && showPopup && (
+          <div className={styles.popup}>
+            <div className={styles.popupContent}>
+              <h2>Đơn hàng đã bị hủy</h2>
+              <p>Thời gian giao dịch đã hết. Vui lòng thử lại.</p>
+              <button onClick={handleClosePopup} className={styles.closeButton}>
+                OK
+              </button>
+            </div>
           </div>
         )}
       </form>
