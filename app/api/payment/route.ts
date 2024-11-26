@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   // url mapping: https://subscription-payments.vercel.app/
 
   // Kiểm tra trạng thái thanh toán
+  // Xử lý logic ở đây (check orderID, packageName, Price)
   const tempId = data.tempId;
   if (tempId) {
     if (tempTransactions[tempId]) {

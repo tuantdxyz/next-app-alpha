@@ -1,4 +1,4 @@
-'use client';
+'use client'
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -16,13 +16,13 @@ const OrderPage = () => {
   const productPrice = price;
 
   const [paymentStatus, setPaymentStatus] = useState('Unpaid');
-  const [loading, setLoading] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(200); // Thời gian đếm ngược 200 giây
+  const [loading, setLoading] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState(20); // Thời gian đếm ngược 200 giây
   const [showPopup, setShowPopup] = useState(false); // Trạng thái để hiển thị popup
   const intervalRef = useRef<number | null>(null); // Đảm bảo kiểu là number hoặc null
 
+  // Hàm gọi API kiểm tra trạng thái thanh toán
   const checkPaymentStatus = async () => {
-    setLoading(true);
     try {
       const response = await fetch('/api/payment', {
         method: 'POST',
@@ -33,47 +33,45 @@ const OrderPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok'); // Ném lỗi nếu không thành công
+        throw new Error('Network response was not ok');
       }
 
       const data = await response.json();
       setPaymentStatus(data.payment_status || 'Unpaid');
     } catch (error) {
       // Không xử lý lỗi để không hiển thị thông báo
-    } finally {
-      setLoading(false);
     }
   };
 
+  // Gọi API checkPaymentStatus mỗi 5 giây
   useEffect(() => {
-    if (timeRemaining > 0) {
-      checkPaymentStatus(); // Gọi API chỉ khi thời gian còn lại
-      intervalRef.current = window.setInterval(checkPaymentStatus, 5000); // Kiểm tra mỗi 5 giây
+    if (paymentStatus === 'Unpaid') {
+      intervalRef.current = window.setInterval(checkPaymentStatus, 5000);
     }
 
     return () => {
       if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current); // Chỉ gọi clearInterval khi intervalRef.current không phải null
+        clearInterval(intervalRef.current); // Dừng interval khi không cần thiết
       }
     };
-  }, [timeRemaining]);
+  }, [paymentStatus]); // Chạy lại khi paymentStatus thay đổi
 
+  // Đếm ngược thời gian và cập nhật trạng thái khi hết thời gian
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev > 0) {
-          return prev - 1;
-        } else {
-          clearInterval(timerId); // Dừng interval khi hết thời gian
-          setPaymentStatus('Cancelled'); // Cập nhật trạng thái thanh toán
-          setShowPopup(true); // Hiển thị popup
-          return 0; // Đảm bảo không giảm xuống dưới 0
-        }
-      });
-    }, 1000);
+    if (timeRemaining > 0) {
+      const timerId = window.setTimeout(() => {
+        setTimeRemaining(prev => prev - 1); // Giảm timeRemaining mỗi giây
+      }, 1000); // Mỗi giây giảm đi 1
 
-    return () => clearInterval(timerId); // Dọn dẹp interval khi component unmount
-  }, []);
+      return () => clearTimeout(timerId); // Dọn dẹp khi component unmount hoặc timeRemaining thay đổi
+    } else if (timeRemaining === 0 && paymentStatus === 'Unpaid') {
+      // Sau khi hết thời gian, thay đổi paymentStatus và hiển thị popup
+      // setPaymentStatus('Cancelled');
+      setPaymentStatus('Paid');
+      setShowPopup(true);
+      setLoading(false); // Dừng vòng loading
+    }
+  }, [timeRemaining, paymentStatus]); // Chạy lại khi timeRemaining hoặc paymentStatus thay đổi
 
   const handleClosePopup = () => {
     setShowPopup(false);
@@ -101,8 +99,9 @@ const OrderPage = () => {
 
         {paymentStatus === 'Paid' && (
           <div className={styles.successPayBox}>
-            <h2>Cảm ơn!</h2>
+            <h2>Cảm ơn bạn!</h2>
             <p>Thanh toán đã được xác nhận.</p>
+            <p>Chúng tôi sẽ gửi thông tin đơn hàng cho bạn qua email và sđt.</p>
             <button onClick={() => router.push('/')} className={styles.closeButton}>
               Đóng
             </button>
