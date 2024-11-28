@@ -17,33 +17,32 @@ const OrderPage = () => {
 
   const [paymentStatus, setPaymentStatus] = useState('Unpaid');
   const [loading, setLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState(20); // Thời gian đếm ngược 200 giây
+  const [timeRemaining, setTimeRemaining] = useState(200); // Thời gian đếm ngược 200 giây
   const [showPopup, setShowPopup] = useState(false); // Trạng thái để hiển thị popup
   const intervalRef = useRef<number | null>(null); // Đảm bảo kiểu là number hoặc null
 
   // Hàm gọi API kiểm tra trạng thái thanh toán
   // client call to server
+  // Hàm gọi API để kiểm tra trạng thái thanh toán
   const checkPaymentStatus = async () => {
     try {
       const response = await fetch('/api/payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ price: price, plan: plan })
+        method: 'GET', // Thay vì POST, sử dụng GET để lấy dữ liệu từ server
       });
 
-      const data = await response.json();
-      console.log('Payment Status Data:', data); // Kiểm tra dữ liệu phản hồi từ server
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment status');
+      }
 
-      // Xử lý phản hồi
-      if (data.payment_status === 'Paid') {
-        setPaymentStatus(data.payment_status); // Cập nhật trạng thái thanh toán
+      const data = await response.json();
+      console.log('Payment Status Data:', data);
+
+      if (data.success && data.paymentStatus === 'Paid') {
+        setPaymentStatus(data.paymentStatus);
         setShowPopup(true);
         setLoading(false);
       }
     } catch (error) {
-      // Không xử lý lỗi để không hiển thị thông báo
       console.log('Payment Status error:', error);
     }
   };
