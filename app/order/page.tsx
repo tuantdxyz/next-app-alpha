@@ -10,7 +10,7 @@ const OrderPage = () => {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const price = searchParams.get('price');
-  const tempId = searchParams.get('tempId'); // Lấy tempId từ URL
+  // const tempId = searchParams.get('tempId'); // Lấy tempId từ URL
 
   const productName = plan;
   const productPrice = price;
@@ -22,6 +22,7 @@ const OrderPage = () => {
   const intervalRef = useRef<number | null>(null); // Đảm bảo kiểu là number hoặc null
 
   // Hàm gọi API kiểm tra trạng thái thanh toán
+  // client call to server
   const checkPaymentStatus = async () => {
     try {
       const response = await fetch('/api/payment', {
@@ -29,17 +30,21 @@ const OrderPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tempId }), // Sử dụng tempId từ URL
+        body: JSON.stringify({ price: price, plan: plan })
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
       const data = await response.json();
-      setPaymentStatus(data.payment_status || 'Unpaid');
+      console.log('Payment Status Data:', data); // Kiểm tra dữ liệu phản hồi từ server
+
+      // Xử lý phản hồi
+      if (data.payment_status === 'Paid') {
+        setPaymentStatus(data.payment_status); // Cập nhật trạng thái thanh toán
+        setShowPopup(true);
+        setLoading(false);
+      }
     } catch (error) {
       // Không xử lý lỗi để không hiển thị thông báo
+      console.log('Payment Status error:', error);
     }
   };
 
@@ -66,8 +71,8 @@ const OrderPage = () => {
       return () => clearTimeout(timerId); // Dọn dẹp khi component unmount hoặc timeRemaining thay đổi
     } else if (timeRemaining === 0 && paymentStatus === 'Unpaid') {
       // Sau khi hết thời gian, thay đổi paymentStatus và hiển thị popup
-      // setPaymentStatus('Cancelled');
-      setPaymentStatus('Paid');
+      setPaymentStatus('Cancelled');
+      // setPaymentStatus('Paid');
       setShowPopup(true);
       setLoading(false); // Dừng vòng loading
     }

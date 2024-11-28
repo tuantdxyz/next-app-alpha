@@ -25,24 +25,12 @@ export async function POST(request: Request) {
       referenceNumber: data.referenceCode,
       description: data.description,
     };
-    return NextResponse.json({ success: true, tempId });
-  }
-
-  // url for webhook: https://example.com/api/payment
-  // url mapping: https://subscription-payments.vercel.app/
-
-  // Kiểm tra trạng thái thanh toán
-  // Xử lý logic ở đây (check orderID, packageName, Price)
-  const tempId = data.tempId;
-  if (tempId) {
-    if (tempTransactions[tempId]) {
-      const transaction = tempTransactions[tempId];
-      const paymentStatus = transaction.transferAmount > 0 ? 'Paid' : 'Unpaid';
-      return NextResponse.json({ payment_status: paymentStatus });
-    } else {
-      return NextResponse.json({ payment_status: 'transaction_not_found' }, { status: 404 });
-    }
-  }
-
-  return NextResponse.json({ success: false, message: 'Invalid data' }, { status: 400 });
+    const transaction = tempTransactions[tempId];
+    const paymentStatus = transaction.transferAmount > 0 ? 'Paid' : 'Unpaid';
+    const price = data.price;
+    const plan = data.plan;
+    // response from server
+    return NextResponse.json({ success: true, message: `${tempId} ${price} ${plan} valid data`, payment_status: paymentStatus }, { status: 200 });
+  } else
+    return NextResponse.json({ success: false, message: 'Invalid data', paymentStatus: 'Unpaid' }, { status: 400 });
 }
